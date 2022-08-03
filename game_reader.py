@@ -5,6 +5,14 @@ import win32gui
 game_window_title = "Minesweeper"
 square_size = 16
 
+# the middle pixel for each square, which will be 
+# used to identify the number on each tile using color
+middle_pixel_pos = (square_size/2 - 1, square_size/2 - 1)
+
+# in case of the numbers that dont paint the middle pixel,
+# we will use this second pixel to get its color
+aux_pixel_pos = (7, 3)
+
 # this could be modified to include presets for 
 # preexisting difficulty settings
 num_rows = 9
@@ -14,6 +22,18 @@ num_cols = 9
 # first square in the game, ignoring user interface
 vertical_ui_size = 55
 horizontal_ui_size = 12
+
+# all of the colors to identify tiles via individual pixels
+WHITE = (255, 255, 255) # on the upper left corner for unclicked tiles
+LIGHT_GREY = (192, 192, 192)    # background color
+BLUE = (0, 0, 255)              # for the number 1
+GREEN = (0, 128, 0)             # for the number 2
+RED = (255, 0, 0)               # for the number 3
+DARK_BLUE = (0, 0, 128)         # for the number 4
+DARK_RED = (128, 0, 0)          # for the number 5
+GREEN_BLUE = (0, 128, 128)      # for the number 6
+BLACK = (0, 0, 0)               # for the number 7
+GREY = (123, 123, 123)          # for the number 8
 
 # returns the screenshot of the game window
 def get_game_screenshot():
@@ -45,6 +65,8 @@ def read_board(im):
 
     # go through all cells 
     for i in range(num_rows):
+        board.append([])
+
         for j in range(num_cols):
             # crops the part of the image from this cell 
             crop_box = (currentX, currentY,
@@ -55,7 +77,9 @@ def read_board(im):
             #filename = "imgs/sq_" + str(i) + "_" + str(j) + ".png"
             #square.save(filename)
 
-            # TODO: get number from each cropped square
+            # get number from each cropped square
+            num_mines = get_number_from_region(square)
+            board[i].append(num_mines)
 
             currentX += square_size
         
@@ -64,9 +88,75 @@ def read_board(im):
 
     return board
 
+# reads the pixels in a region to determine the number that is being shown
+# returns the number of mines surrounding the region (0 to 8), 
+# -1 if cell situation is unknown (unclicked and unmarked), and
+# -2 if cell is unclicked but has been flagged as mine
+def get_number_from_region(region):
+    # first of all, get the upper left pixel. if it is white,
+    # the square has not been clicked yet, so it can be 
+    # either unknown or have a flag placed
+    pixel1 = region.getpixel((0,0))
+    middle_pixel = region.getpixel(middle_pixel_pos)
+
+    if pixel1 == WHITE:
+        # now we differentiate between unknown and flags        
+        if middle_pixel == LIGHT_GREY:
+            # unknown number of mines and no flag
+            return -1
+        else:
+            # a flag has been placed here
+            return -2
+    else:
+        # differentiate between possible number tiles
+        if middle_pixel == LIGHT_GREY:
+            # this can mean no mines (empty square), but also 2 or 7,
+            # as these numbers arent drawn on the middle pixel, so we
+            # check another pixel that should be colored in these cases
+            aux_pixel = region.getpixel(aux_pixel_pos)
+            if aux_pixel == GREEN:
+                # 2 mines nearby
+                return 2
+            elif aux_pixel == BLACK:
+                # 7 mines nearby
+                return 7
+            else:
+                # 0 mines nearby, empty square
+                return 0
+        elif middle_pixel == BLUE:
+            # 1 mine nearby
+            return 1
+        elif middle_pixel == RED:
+            # 3 mines nearby
+            return 3
+        elif middle_pixel == DARK_BLUE:
+            # 4 mines nearby
+            return 4
+        elif middle_pixel == DARK_RED:
+            # 5 mines nearby
+            return 5
+        elif middle_pixel == GREEN_BLUE:
+            # 6 mines nearby
+            return 6
+        elif middle_pixel == GREY:
+            # 8 mines nearby
+            return 8
+
+    print("Error: unidentified region")
+    return -1
+
+# auxiliary function to see the board more clearly
+def print_board(board):
+    for i in range(num_rows):
+        print(board[i])
+
 im = get_game_screenshot()
 if im:
-    im.show()
+    #im.show()
     #im.save("testimage.png")
     board = read_board(im)
+    print_board(board)
+
+
+
 
