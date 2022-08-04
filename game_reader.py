@@ -1,5 +1,6 @@
 import pyautogui
 import win32gui
+import game_input
 
 # constant declaration, could be moved somewhere else
 game_window_title = "Minesweeper"
@@ -23,6 +24,10 @@ num_cols = 9
 vertical_ui_size = 55
 horizontal_ui_size = 12
 
+# the position of the minesweeper window, which will be
+# updated after every call to get_game_screenshot
+global window_position
+
 # all of the colors to identify tiles via individual pixels
 WHITE = (255, 255, 255) # on the upper left corner for unclicked tiles
 LIGHT_GREY = (192, 192, 192)    # background color
@@ -45,6 +50,11 @@ def get_game_screenshot():
         x, y, x1, y1 = win32gui.GetClientRect(gamewnd)
         x, y = win32gui.ClientToScreen(gamewnd, (x, y))
         x1, y1 = win32gui.ClientToScreen(gamewnd, (x1 - x, y1 - y))
+
+        # save the position of the window
+        global window_position 
+        window_position = (x, y)
+
         # get screenshot of desired area
         im = pyautogui.screenshot(region=(x, y, x1, y1))
         return im
@@ -150,13 +160,22 @@ def print_board(board):
     for i in range(num_rows):
         print(board[i])
 
-im = get_game_screenshot()
-if im:
-    #im.show()
-    #im.save("testimage.png")
-    board = read_board(im)
-    print_board(board)
+if __name__ == "__main__":     
+    im = get_game_screenshot()
+    if im:
+        #im.show()
+        #im.save("testimage.png")
+        board = read_board(im)
+        print_board(board)
 
+        # left click on a square
+        game_input.click_cell(window_position, 2, 6)
+        # right click on another one
+        game_input.click_cell(window_position, 4, 4, True)
 
-
+        # print the board again
+        im = get_game_screenshot()
+        board = read_board(im)
+        print("\n")
+        print_board(board)
 
