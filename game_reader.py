@@ -1,6 +1,10 @@
 import pyautogui
 import win32gui
 import game_input
+import termcolor
+import os
+
+os.system('color')
 
 # constant declaration, could be moved somewhere else
 game_window_title = "Minesweeper"
@@ -158,7 +162,37 @@ def get_number_from_region(region):
 # auxiliary function to see the board more clearly
 def print_board(board):
     for i in range(num_rows):
-        print(board[i])
+        for j in range(num_cols):
+            print_cell(board[i][j])
+        
+        print("\n", end='')
+
+# prints the number of mines on a cell in a clear way.
+# for 1-5 mines we use colors similar to the ones in game 
+# for visibility, and 6-8 should not happen very often
+def print_cell(content):
+    if content == -1:   # unknown
+        print(" u ", end='')
+    elif content == -2: # flag
+        print(" f ", end='')
+    elif content == 0:  # empty
+        print("   ", end='')
+    elif content == 1:  # 1 mines
+        print(termcolor.colored(" 1 ", 'cyan'), end='')
+    elif content == 2:  # 2 mines
+        print(termcolor.colored(" 2 ", 'green'), end='')
+    elif content == 3:  # 3 mines
+        print(termcolor.colored(" 3 ", 'red'), end='')
+    elif content == 4:  # 4 mines
+        print(termcolor.colored(" 4 ", 'blue'), end='')
+    elif content == 5:  # 5 mines
+        print(termcolor.colored(" 5 ", 'magenta'), end='')
+    elif content == 6:  # 6 mines
+        print(termcolor.colored(" 6 ", 'yellow'), end='')
+    elif content == 7:  # 7 mines
+        print(termcolor.colored(" 7 ", 'yellow'), end='')
+    elif content == 8:  # 8 mines
+        print(termcolor.colored(" 3 ", 'yellow'), end='')
 
 if __name__ == "__main__":     
     im = get_game_screenshot()
