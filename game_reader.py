@@ -20,8 +20,8 @@ aux_pixel_pos = (7, 3)
 
 # this could be modified to include presets for 
 # preexisting difficulty settings
-num_rows = 9
-num_cols = 9
+num_rows = 16
+num_cols = 16
 
 # this two are used to get the upper left corner of the 
 # first square in the game, ignoring user interface
@@ -167,6 +167,9 @@ def print_board(board):
         
         print("\n", end='')
 
+def get_window_position():
+    return window_position
+
 # prints the number of mines on a cell in a clear way.
 # for 1-5 mines we use colors similar to the ones in game 
 # for visibility, and 6-8 should not happen very often
@@ -203,7 +206,7 @@ if __name__ == "__main__":
         print_board(board)
 
         # left click on a square
-        game_input.click_cell(window_position, 2, 6)
+        game_input.click_cell(window_position, 6, 2)
         # right click on another one
         game_input.click_cell(window_position, 4, 4, True)
 

@@ -4,7 +4,7 @@ import game_reader
 # clicks on one of the game's cells, given its column and row
 # window_position is a tuple containing the position of the game window
 # the click is right if specified, otherwise is a left click 
-def click_cell(window_position, col, row, right_click=False):
+def click_cell(window_position, row, col, right_click=False):
     # position of the upper left cell
     initial_cell_x = window_position[0] + game_reader.horizontal_ui_size
     initial_cell_y = window_position[1] + game_reader.vertical_ui_size
