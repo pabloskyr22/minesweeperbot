@@ -22,6 +22,7 @@ aux_pixel_pos = (7, 3)
 # preexisting difficulty settings
 num_rows = 16
 num_cols = 16
+num_mines = 40
 
 # this two are used to get the upper left corner of the 
 # first square in the game, ignoring user interface

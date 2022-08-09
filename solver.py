@@ -6,8 +6,9 @@ import game_input
 # placing mines in all unknown tiles if all of them must be
 # mines and popping them if all flags have already been placed
 def basic_solve():
-    gameWon = False
     gameOver = False    
+    mines_left = game_reader.num_mines
+
     # we use two updates: one for the smaller loop to see if 
     # working with a specific tile has caused any changes and a
     # new screenshot is needed and another for the bigger loop to
@@ -15,7 +16,7 @@ def basic_solve():
     updated = True
     bigUpdating = True
 
-    while not gameWon and not gameOver:
+    while not gameOver:
         if not bigUpdating:
             break
         else:
@@ -50,6 +51,7 @@ def basic_solve():
                                     tile[1],
                                     right_click=True    # this flags tiles
                                 )
+                                mines_left -= 1
                                 updated = True
                                 bigUpdating = True
                         
@@ -66,6 +68,31 @@ def basic_solve():
                                 )
                                 updated = True
                                 bigUpdating = True
+
+
+                # when there are no mines left, we pop all unopened cells
+                if board[i][j] == -1 and mines_left == 0:
+                    game_input.click_cell(
+                        game_reader.get_window_position(),
+                        i,
+                        j,
+                        right_click=False   # this pops tiles
+                    )
+                    updated = True
+                    bigUpdating = True
+
+    # end while
+
+    # we have to check how many mines are left because clicking the last
+    # unmined square makes the game automatically flag all remaining mines
+    # so we cannot trust our previous count of mines left
+    mines_left = recompute_mines_left(board)
+
+    # win / stuck conditions
+    if mines_left == 0:
+        print("Game won!")
+    else:
+        print("Dead end encountered...")
                         
 
 # get a list of all tiles surrounding the one with given coordinates,
@@ -118,6 +145,16 @@ def get_flagged_around(board, row, col):
     
     return flagged
     
+# calculates the number of mines left as the starting number
+# minus all the flags that have been placed on the grid
+def recompute_mines_left(board):
+    mines_left = game_reader.num_mines
+
+    for i in range(game_reader.num_rows):
+        for j in range(game_reader.num_cols):
+            mines_left -= (board[i][j] == -2)
+
+    return mines_left
 
 if __name__ == "__main__":
     im = game_reader.get_game_screenshot()
