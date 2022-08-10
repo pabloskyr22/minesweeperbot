@@ -35,6 +35,7 @@ global window_position
 
 # all of the colors to identify tiles via individual pixels
 WHITE = (255, 255, 255) # on the upper left corner for unclicked tiles
+                        # also on the middle pixel for bombed mines
 LIGHT_GREY = (192, 192, 192)    # background color
 BLUE = (0, 0, 255)              # for the number 1
 GREEN = (0, 128, 0)             # for the number 2
@@ -105,8 +106,9 @@ def read_board(im):
 
 # reads the pixels in a region to determine the number that is being shown
 # returns the number of mines surrounding the region (0 to 8), 
-# -1 if cell situation is unknown (unclicked and unmarked), and
-# -2 if cell is unclicked but has been flagged as mine
+# -1 if cell situation is unknown (unclicked and unmarked), 
+# -2 if cell is unclicked but has been flagged as mine, and
+# -3 if cells contains a mine that has been exploded (game over)
 def get_number_from_region(region):
     # first of all, get the upper left pixel. if it is white,
     # the square has not been clicked yet, so it can be 
@@ -156,6 +158,9 @@ def get_number_from_region(region):
         elif middle_pixel == GREY:
             # 8 mines nearby
             return 8
+        elif middle_pixel == WHITE:
+            # exploded mine (game over)
+            return -3
 
     print("Error: unidentified region")
     return -1
@@ -201,6 +206,8 @@ def print_cell(content):
         print(" u ", end='')
     elif content == -2: # flag
         print(" f ", end='')
+    elif content == -3: # exploded mine
+        print(" m ", end='')
     elif content == 0:  # empty
         print("   ", end='')
     elif content == 1:  # 1 mines

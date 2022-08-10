@@ -19,15 +19,18 @@ def basic_solve():
     bigUpdating = True
 
     # we start popping a random unknown tile
-    im = game_reader.get_game_screenshot()
-    if im:
-        board = game_reader.read_board(im)
-
     ret = -1
     while ret != 0:
+        im = game_reader.get_game_screenshot()
+        if im:
+            board = game_reader.read_board(im)
         # pop a random tile until it reveals a 0,
         # which means a large area has been revealed
         ret = click_random_tile()
+        # we lost while random clicking
+        if ret == -3:
+            print("Bad luck, lost on a random starting click :(")
+            return
 
     while not gameOver:
         if not bigUpdating:
@@ -106,6 +109,8 @@ def basic_solve():
         print("Game won!")
     else:
         print("Dead end encountered...")
+        print("Board is: ")
+        game_reader.print_board(board)
 
 
 # left clicks (pops) on a random tile in the game and
