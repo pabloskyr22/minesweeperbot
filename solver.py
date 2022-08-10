@@ -1,3 +1,4 @@
+import sys
 import game_reader
 import game_input
 
@@ -157,5 +158,8 @@ def recompute_mines_left(board):
     return mines_left
 
 if __name__ == "__main__":
-    im = game_reader.get_game_screenshot()
+    # difficulty can be specified through command line
+    if len(sys.argv) > 1:
+        game_reader.load_difficulty(sys.argv[1])
+    
     basic_solve()

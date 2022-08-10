@@ -160,6 +160,28 @@ def get_number_from_region(region):
     print("Error: unidentified region")
     return -1
 
+# sets the values of the grid according to the specified difficulty
+# b: beginner, i: intermediate, e: expert
+# default values for the windows xp minesweeper are used
+def load_difficulty(arg):
+    global num_rows, num_cols, num_mines
+
+    if not arg: 
+        # if no argument is specified we use the values set above
+        return
+    elif arg == 'b':    # beginner
+        num_rows = 9
+        num_cols = 9
+        num_mines = 10
+    elif arg == 'i':    # intermediate
+        num_rows = 16
+        num_cols = 16
+        num_mines = 40
+    elif arg == 'e':    # expert
+        num_rows = 16
+        num_cols = 30
+        num_mines = 99
+
 # auxiliary function to see the board more clearly
 def print_board(board):
     for i in range(num_rows):
