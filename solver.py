@@ -1,6 +1,7 @@
 import sys
 import game_reader
 import game_input
+import random
 
 # solves the game, by now, with the single square method
 # this method checks the surrounding tiles of a numbered square,
@@ -16,6 +17,17 @@ def basic_solve():
     # see if we are still making any progress or if we are stuck
     updated = True
     bigUpdating = True
+
+    # we start popping a random unknown tile
+    im = game_reader.get_game_screenshot()
+    if im:
+        board = game_reader.read_board(im)
+
+    ret = -1
+    while ret != 0:
+        # pop a random tile until it reveals a 0,
+        # which means a large area has been revealed
+        ret = click_random_tile()
 
     while not gameOver:
         if not bigUpdating:
@@ -94,7 +106,26 @@ def basic_solve():
         print("Game won!")
     else:
         print("Dead end encountered...")
-                        
+
+
+# left clicks (pops) on a random tile in the game and
+# returns the number underneath said tile
+def click_random_tile():
+    row = random.randrange(game_reader.num_rows)
+    col = random.randrange(game_reader.num_cols)
+
+    game_input.click_cell(
+        game_reader.get_window_position(),
+        row,
+        col,
+        right_click=False   # this pops tiles
+    )
+
+    im = game_reader.get_game_screenshot()
+    if im:
+        board = game_reader.read_board(im)
+
+    return board[row][col]
 
 # get a list of all tiles surrounding the one with given coordinates,
 # taking into acount corners and edges of the game grid
