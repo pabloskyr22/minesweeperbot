@@ -20,3 +20,8 @@ def click_cell(window_position, row, col, right_click=False):
         pyautogui.click(cell_pos_x, cell_pos_y, button='left')
 
     return
+
+# starts a new game on current difficulty
+# this is done by pressing "F2" on XP's version
+def new_game():
+    pyautogui.press("f2")

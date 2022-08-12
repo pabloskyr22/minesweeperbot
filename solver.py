@@ -7,6 +7,8 @@ import random
 # this method checks the surrounding tiles of a numbered square,
 # placing mines in all unknown tiles if all of them must be
 # mines and popping them if all flags have already been placed
+# returns 1 if it has been able to solve the game, 0 if it got
+# stuck and -1 if it lost the game on a random starting click
 def basic_solve():
     gameOver = False    
     mines_left = game_reader.num_mines
@@ -30,7 +32,7 @@ def basic_solve():
         # we lost while random clicking
         if ret == -3:
             print("Bad luck, lost on a random starting click :(")
-            return
+            return -1
 
     while not gameOver:
         if not bigUpdating:
@@ -107,10 +109,10 @@ def basic_solve():
     # win / stuck conditions
     if mines_left == 0:
         print("Game won!")
+        return 1
     else:
         print("Dead end encountered...")
-        print("Board is: ")
-        game_reader.print_board(board)
+        return 0
 
 
 # left clicks (pops) on a random tile in the game and
