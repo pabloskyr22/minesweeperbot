@@ -1,4 +1,5 @@
 import sys
+import copy
 import game_reader
 import game_input
 import random
@@ -69,8 +70,7 @@ def basic_solve():
                             if board[tile[0]][tile[1]] == -1:   # only unknown
                                 game_input.click_cell(
                                     game_reader.get_window_position(),
-                                    tile[0],
-                                    tile[1],
+                                    tile[0], tile[1],
                                     right_click=True    # this flags tiles
                                 )
                                 mines_left -= 1
@@ -84,8 +84,7 @@ def basic_solve():
                             if board[tile[0]][tile[1]] == -1:   # only unknown
                                 game_input.click_cell(
                                     game_reader.get_window_position(),
-                                    tile[0],
-                                    tile[1],
+                                    tile[0], tile[1],
                                     right_click=False   # this pops tiles
                                 )
                                 updated = True
@@ -96,8 +95,7 @@ def basic_solve():
                 if board[i][j] == -1 and mines_left == 0:
                     game_input.click_cell(
                         game_reader.get_window_position(),
-                        i,
-                        j,
+                        i, j,
                         right_click=False   # this pops tiles
                     )
                     updated = True
@@ -127,15 +125,20 @@ def multisquare_solve(board):
     # now we get all the possible mine combinations of border_tiles
     global possible_sols
     possible_sols = []
-    generate_solutions_rec(border_tiles, {})
+    generate_solutions_rec(board, border_tiles, {})
 
 # recursive function to generate all possible valid combinations for the 
 # list of tiles border_tiles, where current_mines is a dictionary that matches
 # tiles from border_tiles to boolean values if there is or isnt a mine
 # on the solution path we are currently exploring, so that when all of
 # border_tiles are on current mines recursion ends
-def generate_solutions_rec(border_tiles, current_mines):
-    # check if the solution is valid so far (TODO)
+def generate_solutions_rec(board, border_tiles, current_mines):
+    # check if the solution is valid so far 
+    # this is the board updated with the combination we have so far
+    virtual_board = generate_virtual_board(board, current_mines)
+    if not valid_board(virtual_board):
+        # we dont add nothing to the possible_sols list, ending recursion
+        return
     
     # base case, we have as many tiles decided with/without mine
     # as tiles we had on the border originally, we found a solution
@@ -153,12 +156,49 @@ def generate_solutions_rec(border_tiles, current_mines):
     # next_tile has a mine, we continue the recursion
     current_mines_1 = current_mines.copy()
     current_mines_1[next_tile] = True
-    generate_solutions_rec(border_tiles, current_mines_1)
+    generate_solutions_rec(board, border_tiles, current_mines_1)
         
     # next_tile has NO mine, we continue the recursion
     current_mines_2 = current_mines.copy()
     current_mines_2[next_tile] = False
-    generate_solutions_rec(border_tiles, current_mines_2)
+    generate_solutions_rec(board, border_tiles, current_mines_2)
+
+# generates the hypothetical board that would be the result of modifying
+# the existing board with the guessses present on the current_mines dict
+def generate_virtual_board(board, current_mines):
+    virtual_board = copy.deepcopy(board)
+
+    # update every tile on the virtual board with the mine information
+    # present on current_mines (if there is/isnt a mine on those tiles)
+    for tile in current_mines:
+        if current_mines[tile] == True:
+            # place a flag there
+            virtual_board[tile[0]][tile[1]] == -2
+        else:
+            # no mine on this tile
+            # the easiest way to label the tile as "no mine" is to
+            # put a 0 so that the valid_board function doesnt check its
+            # correction (even though we dont now the tile's content)
+            virtual_board[tile[0]][tile[1]] == 0
+
+    return virtual_board
+
+# checks if the given board is in a valid game state
+def valid_board(board):
+    # go through every tile
+    for i in range(game_reader.num_cols):
+        for j in range(game_reader.num_rows):
+            if board[i][j] > 0:     # we only check numbered tiles
+                mines_placed = get_flagged_around(board, i, j)
+                unknown_tiles = get_unflagged_around(board, i, j)
+                # there are more mines that should be, error
+                if mines_placed > board[i][j]:
+                    return False
+                # there are less possible mines that should be, error
+                if mines_placed + unknown_tiles < board[i][j]:
+                    return False
+
+    return True
 
 # left clicks (pops) on a random tile in the game and
 # returns the number underneath said tile
@@ -270,6 +310,6 @@ if __name__ == "__main__":
     #basic_solve()
     possible_sols = []
     border_tiles = [(1, 1), (2, 2), (3, 3)]
-    generate_solutions_rec(border_tiles, {})
+    generate_solutions_rec(0, border_tiles, {})
     print(possible_sols)
     print(len(possible_sols))
