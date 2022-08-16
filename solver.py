@@ -3,6 +3,10 @@ import game_reader
 import game_input
 import random
 
+# global variable to hold all possible solutions that are
+# going to be calculated by the multisquare algorythm
+possible_sols = []
+
 # solves the game, by now, with the single square method
 # this method checks the surrounding tiles of a numbered square,
 # placing mines in all unknown tiles if all of them must be
@@ -114,6 +118,47 @@ def basic_solve():
         print("Dead end encountered...")
         return 0
 
+# for now, this takes the board already screenshot, expecting to
+# be called from basic_solve only if it gets stuck
+def multisquare_solve(board):
+    # get all border tiles
+    border_tiles = get_border_tiles(board)
+
+    # now we get all the possible mine combinations of border_tiles
+    global possible_sols
+    possible_sols = []
+    generate_solutions_rec(border_tiles, {})
+
+# recursive function to generate all possible valid combinations for the 
+# list of tiles border_tiles, where current_mines is a dictionary that matches
+# tiles from border_tiles to boolean values if there is or isnt a mine
+# on the solution path we are currently exploring, so that when all of
+# border_tiles are on current mines recursion ends
+def generate_solutions_rec(border_tiles, current_mines):
+    # check if the solution is valid so far (TODO)
+    
+    # base case, we have as many tiles decided with/without mine
+    # as tiles we had on the border originally, we found a solution
+    if len(current_mines) == len(border_tiles):
+        global possible_sols
+        possible_sols.append(current_mines)
+        return
+    
+    # otherwise, we split in two smaller recursive settings:
+    # one when next undecided tile has a mine and one when it doesnt
+
+    # the first tile that has not been decided yet in current_mines
+    next_tile = border_tiles[len(current_mines)]
+
+    # next_tile has a mine, we continue the recursion
+    current_mines_1 = current_mines.copy()
+    current_mines_1[next_tile] = True
+    generate_solutions_rec(border_tiles, current_mines_1)
+        
+    # next_tile has NO mine, we continue the recursion
+    current_mines_2 = current_mines.copy()
+    current_mines_2[next_tile] = False
+    generate_solutions_rec(border_tiles, current_mines_2)
 
 # left clicks (pops) on a random tile in the game and
 # returns the number underneath said tile
@@ -183,7 +228,29 @@ def get_flagged_around(board, row, col):
         flagged += (board[tile[0]][tile[1]] == -2)
     
     return flagged
+
+# returns the number of opened tiles around the one given its coordinates
+def get_opened_around(board, row, col):
+    opened = 0
+
+    for tile in get_all_surrounding_tiles(row, col):
+        opened += (board[tile[0]][tile[1]] >= 0)
     
+    return opened
+    
+# returns a list of tuples (row, col) of tiles that are considered border,
+# that is, that are unopened and have at least one opened tile around them
+def get_border_tiles(board):
+    border_tiles = []
+
+    for i in range(game_reader.num_cols):
+        for j in range(game_reader.num_rows):
+            # unknown tile with at least one opened tile around them
+            if board[i][j] == -1 and get_opened_around(board, i, j) > 0:
+                border_tiles.append((i, j))
+
+    return border_tiles
+
 # calculates the number of mines left as the starting number
 # minus all the flags that have been placed on the grid
 def recompute_mines_left(board):
@@ -200,4 +267,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         game_reader.load_difficulty(sys.argv[1])
     
-    basic_solve()
+    #basic_solve()
+    possible_sols = []
+    border_tiles = [(1, 1), (2, 2), (3, 3)]
+    generate_solutions_rec(border_tiles, {})
+    print(possible_sols)
+    print(len(possible_sols))
