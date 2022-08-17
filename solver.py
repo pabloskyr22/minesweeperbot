@@ -40,13 +40,27 @@ def basic_solve():
             return -1
 
     while not gameOver:
-        if not bigUpdating:
-            break
-        else:
-            im = game_reader.get_game_screenshot()
-            if im:
-                board = game_reader.read_board(im)
-                bigUpdating = False
+        if not bigUpdating:     # last loop did nothing
+            # differentiate between game won and getting stuck
+            mines_left = recompute_mines_left(board)
+            if mines_left > 0:
+                # when this algorythm gets stuck, we use the multisquare solver
+                im = game_reader.get_game_screenshot()
+                if im:
+                    board = game_reader.read_board(im)
+
+                print("Using multisquare solver")
+                ret = multisquare_solve(board)
+                if not ret:
+                    print("multisquare did nothing")
+                    break
+            else:
+                break
+
+        im = game_reader.get_game_screenshot()
+        if im:
+            board = game_reader.read_board(im)
+            bigUpdating = False
 
         # go through each tile
         for i in range(game_reader.num_rows):
@@ -119,13 +133,50 @@ def basic_solve():
 # for now, this takes the board already screenshot, expecting to
 # be called from basic_solve only if it gets stuck
 def multisquare_solve(board):
+    # to check if this method was able to progress on the game or if we are stuck
+    did_something = False
     # get all border tiles
     border_tiles = get_border_tiles(board)
 
     # now we get all the possible mine combinations of border_tiles
-    global possible_sols
-    possible_sols = []
+    global possible_sols    # here is where these combinations are stored
+    possible_sols = []  
     generate_solutions_rec(board, border_tiles, {})
+
+    # now we check for each border tile if it was a mine or empty
+    # in all obtained solutions, in which case we flag / pop it
+    for tile in border_tiles:
+        always_mine = True
+        always_empty = True
+
+        for sol in possible_sols:
+            # mine there
+            if sol[tile] == True:
+                always_empty = False
+            else:   # empty space there
+                always_mine = False
+
+        if always_mine:
+            # we can 100% confirm there is a mine here!
+            game_input.click_cell(
+                game_reader.get_window_position(),
+                tile[0], tile[1],
+                right_click=True    # this flags tiles
+            )
+            did_something = True
+        elif always_empty:
+            # we can 100% confirm this space is empty!
+            game_input.click_cell(
+                game_reader.get_window_position(),
+                tile[0], tile[1],
+                right_click=False    # this pops tiles
+            )
+            did_something = True
+
+    # we return now to the basic algorythm, with hopes that the new state of
+    # the board doesnt get it stuck. if that happens, that algorythm will 
+    # call the multisquare method again
+    return did_something
 
 # recursive function to generate all possible valid combinations for the 
 # list of tiles border_tiles, where current_mines is a dictionary that matches
@@ -154,12 +205,12 @@ def generate_solutions_rec(board, border_tiles, current_mines):
     next_tile = border_tiles[len(current_mines)]
 
     # next_tile has a mine, we continue the recursion
-    current_mines_1 = current_mines.copy()
+    current_mines_1 = copy.deepcopy(current_mines)
     current_mines_1[next_tile] = True
     generate_solutions_rec(board, border_tiles, current_mines_1)
         
     # next_tile has NO mine, we continue the recursion
-    current_mines_2 = current_mines.copy()
+    current_mines_2 = copy.deepcopy(current_mines)
     current_mines_2[next_tile] = False
     generate_solutions_rec(board, border_tiles, current_mines_2)
 
@@ -173,21 +224,21 @@ def generate_virtual_board(board, current_mines):
     for tile in current_mines:
         if current_mines[tile] == True:
             # place a flag there
-            virtual_board[tile[0]][tile[1]] == -2
+            virtual_board[tile[0]][tile[1]] = -2
         else:
             # no mine on this tile
             # the easiest way to label the tile as "no mine" is to
             # put a 0 so that the valid_board function doesnt check its
             # correction (even though we dont now the tile's content)
-            virtual_board[tile[0]][tile[1]] == 0
+            virtual_board[tile[0]][tile[1]] = 0
 
     return virtual_board
 
 # checks if the given board is in a valid game state
 def valid_board(board):
     # go through every tile
-    for i in range(game_reader.num_cols):
-        for j in range(game_reader.num_rows):
+    for i in range(game_reader.num_rows):
+        for j in range(game_reader.num_cols):
             if board[i][j] > 0:     # we only check numbered tiles
                 mines_placed = get_flagged_around(board, i, j)
                 unknown_tiles = get_unflagged_around(board, i, j)
@@ -283,8 +334,8 @@ def get_opened_around(board, row, col):
 def get_border_tiles(board):
     border_tiles = []
 
-    for i in range(game_reader.num_cols):
-        for j in range(game_reader.num_rows):
+    for i in range(game_reader.num_rows):
+        for j in range(game_reader.num_cols):
             # unknown tile with at least one opened tile around them
             if board[i][j] == -1 and get_opened_around(board, i, j) > 0:
                 border_tiles.append((i, j))
@@ -307,9 +358,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         game_reader.load_difficulty(sys.argv[1])
     
-    #basic_solve()
-    possible_sols = []
-    border_tiles = [(1, 1), (2, 2), (3, 3)]
-    generate_solutions_rec(0, border_tiles, {})
-    print(possible_sols)
-    print(len(possible_sols))
+    basic_solve()
