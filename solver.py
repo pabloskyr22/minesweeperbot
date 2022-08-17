@@ -138,40 +138,48 @@ def multisquare_solve(board):
     # get all border tiles
     border_tiles = get_border_tiles(board)
 
-    # now we get all the possible mine combinations of border_tiles
-    global possible_sols    # here is where these combinations are stored
-    possible_sols = []  
-    generate_solutions_rec(board, border_tiles, {})
+    # divide border_tiles in equivalency groups so all mine
+    # combinations can be considered separatedly (which is faster)
+    border_groups = generate_border_groups(border_tiles)
 
-    # now we check for each border tile if it was a mine or empty
-    # in all obtained solutions, in which case we flag / pop it
-    for tile in border_tiles:
-        always_mine = True
-        always_empty = True
+    print(border_groups)
 
-        for sol in possible_sols:
-            # mine there
-            if sol[tile] == True:
-                always_empty = False
-            else:   # empty space there
-                always_mine = False
+    # each group is treated on its own
+    for group in border_groups:
+        # now we get all the possible mine combinations of this group
+        global possible_sols    # here is where these combinations are stored
+        possible_sols = []  
+        generate_solutions_rec(board, group, {})
 
-        if always_mine:
-            # we can 100% confirm there is a mine here!
-            game_input.click_cell(
-                game_reader.get_window_position(),
-                tile[0], tile[1],
-                right_click=True    # this flags tiles
-            )
-            did_something = True
-        elif always_empty:
-            # we can 100% confirm this space is empty!
-            game_input.click_cell(
-                game_reader.get_window_position(),
-                tile[0], tile[1],
-                right_click=False    # this pops tiles
-            )
-            did_something = True
+        # now we check for each border tile if it was a mine or empty
+        # in all obtained solutions, in which case we flag / pop it
+        for tile in group:
+            always_mine = True
+            always_empty = True
+
+            for sol in possible_sols:
+                # mine there
+                if sol[tile] == True:
+                    always_empty = False
+                else:   # empty space there
+                    always_mine = False
+
+            if always_mine:
+                # we can 100% confirm there is a mine here!
+                game_input.click_cell(
+                    game_reader.get_window_position(),
+                    tile[0], tile[1],
+                    right_click=True    # this flags tiles
+                )
+                did_something = True
+            elif always_empty:
+                # we can 100% confirm this space is empty!
+                game_input.click_cell(
+                    game_reader.get_window_position(),
+                    tile[0], tile[1],
+                    right_click=False    # this pops tiles
+                )
+                did_something = True
 
     # we return now to the basic algorythm, with hopes that the new state of
     # the board doesnt get it stuck. if that happens, that algorythm will 
@@ -250,6 +258,48 @@ def valid_board(board):
                     return False
 
     return True
+
+# divides border_tiles in groups of tiles that are independent, that is,
+# whose tiles are at distance 1, so that the multisquare algorythm
+# can be applied on each of these groups independently for speed
+def generate_border_groups(border_tiles):
+    border_groups = []
+
+    tiles_to_add = copy.deepcopy(border_tiles)
+
+    # the outer loop creates all groups
+    while len(tiles_to_add) > 0:
+        group = [tiles_to_add.pop()]    # get an element from the list
+
+        updating_group = True
+        # in this loop we add all elements belonging to this group
+        # we may have to go through every tile in case a tile belongs
+        # to the group only after another tile has been added later
+        while updating_group:   # loop this until no more tiles are added
+            updating_group = False
+            for tile in tiles_to_add:
+                # add all tiles within distance 1
+                if belongs_to_group(tile, group):
+                    tiles_to_add.remove(tile)
+                    group.append(tile)
+                    updating_group = True
+
+        border_groups.append(group)
+
+    return border_groups
+
+# checks if the given tile belongs in the given equivalence group.
+# this happen if the tile is at distance 1 or less (in both 
+# coordinates) of any other tile in the group
+def belongs_to_group(tile, group):
+    for group_tile in group:
+        # the tile will be on the group if its within distance 1
+        # of one of the tiles already on the group
+        if abs(tile[0] - group_tile[0]) <= 1 and \
+            abs(tile[1] - group_tile[1]) <= 1:
+            return True
+
+    return False
 
 # left clicks (pops) on a random tile in the game and
 # returns the number underneath said tile
