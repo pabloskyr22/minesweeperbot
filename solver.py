@@ -142,8 +142,6 @@ def multisquare_solve(board):
     # combinations can be considered separatedly (which is faster)
     border_groups = generate_border_groups(border_tiles)
 
-    print(border_groups)
-
     # each group is treated on its own
     for group in border_groups:
         # now we get all the possible mine combinations of this group
@@ -244,6 +242,7 @@ def generate_virtual_board(board, current_mines):
 
 # checks if the given board is in a valid game state
 def valid_board(board):
+    virtual_flags = 0
     # go through every tile
     for i in range(game_reader.num_rows):
         for j in range(game_reader.num_cols):
@@ -256,6 +255,17 @@ def valid_board(board):
                 # there are less possible mines that should be, error
                 if mines_placed + unknown_tiles < board[i][j]:
                     return False
+            elif board[i][j] == -2: 
+                # we keep track of how many mines we have detected
+                virtual_flags += 1
+
+    # we discard virtual boards if they have more mines flagged that the
+    # total mines the board should have. however, virtual_flags could be
+    # strictly less that the total number of mines as the board we are validating
+    # could still have unknown tiles (because not every unclicked tile is 
+    # on the border_tiles list of tiles we are calculating combinations)
+    if virtual_flags > game_reader.num_mines:
+        return False
 
     return True
 
