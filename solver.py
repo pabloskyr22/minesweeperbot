@@ -416,6 +416,6 @@ def recompute_mines_left(board):
 if __name__ == "__main__":
     # difficulty can be specified through command line
     if len(sys.argv) > 1:
-        game_reader.load_difficulty(sys.argv[1])
+        game_reader.load_difficulty(sys.argv)
     
     basic_solve()
