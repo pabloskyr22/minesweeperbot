@@ -8,6 +8,15 @@ import random
 # going to be calculated by the multisquare algorythm
 possible_sols = []
 
+# when there are less that LOW_TILES_THRESHOLD unknown tiles left,
+# the multisquare algorythm will calculate the mine combinations on
+# all remaining tiles instead of just the border tiles, as cost
+# now is feasible. Ideally, this threshold shouldn exist and the 
+# recursion should be applied on all tiles in order to solve the
+# highest amount of boards possible, but cost is exponential to
+# the number of tiles we want to calculate combinations of
+LOW_TILES_THRESHOLD = 20
+
 # solves the game, by now, with the single square method
 # this method checks the surrounding tiles of a numbered square,
 # placing mines in all unknown tiles if all of them must be
@@ -135,19 +144,34 @@ def basic_solve():
 def multisquare_solve(board):
     # to check if this method was able to progress on the game or if we are stuck
     did_something = False
-    # get all border tiles
-    border_tiles = get_border_tiles(board)
+    working_on_all_tiles = False
 
-    # divide border_tiles in equivalency groups so all mine
-    # combinations can be considered separatedly (which is faster)
-    border_groups = generate_border_groups(border_tiles)
+    unknown_tiles = get_unknown_tiles(board)
+
+    # if there are less unknown tiles that a certain optimization threshold,
+    # we calculate the combinations on all the remaining tiles instead of just
+    # the border ones, and thus we dont separate them in border_groups.
+    # While this second option is better (as it would allow us to solve any
+    # deterministic board -that can be solved without guessing-), its cost
+    # is extremely high so we cant apply it until the late game
+    if len(unknown_tiles) > LOW_TILES_THRESHOLD:
+        # get all border tiles
+        border_tiles = get_border_tiles(board)
+        # divide border_tiles in equivalency groups so all mine
+        # combinations can be considered separatedly (which is faster)
+        border_groups = generate_border_groups(border_tiles)
+    else:
+        # no grouping tiles for the late game method
+        print("Using late game optimization")
+        border_groups = [unknown_tiles]
+        working_on_all_tiles = True
 
     # each group is treated on its own
     for group in border_groups:
         # now we get all the possible mine combinations of this group
         global possible_sols    # here is where these combinations are stored
         possible_sols = []  
-        generate_solutions_rec(board, group, {})
+        generate_solutions_rec(board, group, {}, working_on_all_tiles)
 
         # now we check for each border tile if it was a mine or empty
         # in all obtained solutions, in which case we flag / pop it
@@ -188,8 +212,11 @@ def multisquare_solve(board):
 # list of tiles border_tiles, where current_mines is a dictionary that matches
 # tiles from border_tiles to boolean values if there is or isnt a mine
 # on the solution path we are currently exploring, so that when all of
-# border_tiles are on current mines recursion ends
-def generate_solutions_rec(board, border_tiles, current_mines):
+# border_tiles are on current mines recursion ends.
+# If working_on_all_tiles is True, the recursion is being applied on all
+# of the remaining unknown tiles, so the number of mines on the hypothetical
+# solution must be exactly the number of mines of the game
+def generate_solutions_rec(board, border_tiles, current_mines, working_on_all_tiles):
     # check if the solution is valid so far 
     # this is the board updated with the combination we have so far
     virtual_board = generate_virtual_board(board, current_mines)
@@ -200,6 +227,11 @@ def generate_solutions_rec(board, border_tiles, current_mines):
     # base case, we have as many tiles decided with/without mine
     # as tiles we had on the border originally, we found a solution
     if len(current_mines) == len(border_tiles):
+        # but if we are making the recursion on all tiles for the late game
+        # we have to make sure that the virtual board has all mines flagged
+        # (as it wont have unknown tiles anymore)
+        if working_on_all_tiles and recompute_mines_left(virtual_board) != 0:
+            return  # unvalid solution, we dont add it
         global possible_sols
         possible_sols.append(current_mines)
         return
@@ -213,12 +245,12 @@ def generate_solutions_rec(board, border_tiles, current_mines):
     # next_tile has a mine, we continue the recursion
     current_mines_1 = copy.deepcopy(current_mines)
     current_mines_1[next_tile] = True
-    generate_solutions_rec(board, border_tiles, current_mines_1)
+    generate_solutions_rec(board, border_tiles, current_mines_1, working_on_all_tiles)
         
     # next_tile has NO mine, we continue the recursion
     current_mines_2 = copy.deepcopy(current_mines)
     current_mines_2[next_tile] = False
-    generate_solutions_rec(board, border_tiles, current_mines_2)
+    generate_solutions_rec(board, border_tiles, current_mines_2, working_on_all_tiles)
 
 # generates the hypothetical board that would be the result of modifying
 # the existing board with the guessses present on the current_mines dict
@@ -401,6 +433,18 @@ def get_border_tiles(board):
                 border_tiles.append((i, j))
 
     return border_tiles
+
+# returns a list of tuples (row, col) of tiles that are unknown
+def get_unknown_tiles(board):
+    unknown_tiles = []
+
+    for i in range(game_reader.num_rows):
+        for j in range(game_reader.num_cols):
+            if board[i][j] == -1:
+                unknown_tiles.append((i, j))
+
+    return unknown_tiles
+                
 
 # calculates the number of mines left as the starting number
 # minus all the flags that have been placed on the grid
