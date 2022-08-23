@@ -60,9 +60,12 @@ def basic_solve():
 
                 print("Using multisquare solver")
                 ret = multisquare_solve(board)
-                if not ret:
+                if ret == 0:
                     print("multisquare did nothing")
                     break
+                elif ret == -1:
+                    # we lost on an undeterministic guess, exit solver
+                    return 0
             else:
                 break
 
@@ -133,14 +136,21 @@ def basic_solve():
 
     # win / stuck conditions
     if mines_left == 0:
+        # we may still need to pop some tiles we know are clean
+        pop_all_unknowns(board)
         print("Game won!")
         return 1
     else:
         print("Dead end encountered...")
         return 0
 
-# for now, this takes the board already screenshot, expecting to
-# be called from basic_solve only if it gets stuck
+# advanced (and slower) method to be used when the singlesquare solver gets stuck.
+# this method divides all border tiles into independent regions and generates all
+# possible solutions for these regions, popping tiles that are always empty on all
+# solutions and flagging the ones that are always mines, and if no tile matches any
+# of this criteria it will pop the one with the highest (estimated) probability
+# of being safe, which might lead to a game over.
+# returns 1 if the solver made progress, -1 if it caused a gameover and 0 otherwise
 def multisquare_solve(board):
     # to check if this method was able to progress on the game or if we are stuck
     did_something = False
@@ -160,11 +170,22 @@ def multisquare_solve(board):
         # divide border_tiles in equivalency groups so all mine
         # combinations can be considered separatedly (which is faster)
         border_groups = generate_border_groups(border_tiles)
+        print(border_groups)
     else:
         # no grouping tiles for the late game method
         print("Using late game optimization")
         border_groups = [unknown_tiles]
         working_on_all_tiles = True
+
+    # this is the highest probability of a tile NOT having a mine out of all
+    # tiles in border_groups, which will be popped only if we cannot make
+    # any deterministic/certain move. Note that these probabilities are only an
+    # estimate if we are only calculations on a limited set of border tiles, as
+    # we are not taking into account all of the possible combinations across all
+    # the board with the exact ammount of mines left so combinations on a single
+    # border group may not be equally likely, but the estimation should be enough
+    best_prob = 0
+    best_tile = (-1, -1)
 
     # each group is treated on its own
     for group in border_groups:
@@ -176,17 +197,17 @@ def multisquare_solve(board):
         # now we check for each border tile if it was a mine or empty
         # in all obtained solutions, in which case we flag / pop it
         for tile in group:
-            always_mine = True
-            always_empty = True
+            times_mine = 0
+            times_empty = 0
 
             for sol in possible_sols:
                 # mine there
                 if sol[tile] == True:
-                    always_empty = False
+                    times_mine += 1
                 else:   # empty space there
-                    always_mine = False
+                    times_empty += 1
 
-            if always_mine:
+            if times_empty == 0:
                 # we can 100% confirm there is a mine here!
                 game_input.click_cell(
                     game_reader.get_window_position(),
@@ -194,7 +215,7 @@ def multisquare_solve(board):
                     right_click=True    # this flags tiles
                 )
                 did_something = True
-            elif always_empty:
+            elif times_mine == 0:
                 # we can 100% confirm this space is empty!
                 game_input.click_cell(
                     game_reader.get_window_position(),
@@ -202,11 +223,39 @@ def multisquare_solve(board):
                     right_click=False    # this pops tiles
                 )
                 did_something = True
+            elif not did_something:
+                # only continue calculating probabilities if no move could be made
+                prob = times_empty / (times_empty + times_mine)
+                if prob > best_prob:
+                    best_prob = prob
+                    best_tile = tile
+
+    # if no deterministic move could be made, we have to guess
+    if not did_something:
+        print("Guessing at tile " + str(best_tile) + " with success probability: " + str(best_prob))
+        game_input.click_cell(
+            game_reader.get_window_position(),
+            best_tile[0], best_tile[1],
+            right_click=False   # this pops tiles
+        )
+        did_something = True
+
+        # we have to check for a game over
+        im = game_reader.get_game_screenshot()
+        if im:
+            board = game_reader.read_board(im)
+
+        if board[best_tile[0]][best_tile[1]] == -3: # we lost
+            print("GAMEOVER: Guess failed")
+            return -1
 
     # we return now to the basic algorythm, with hopes that the new state of
     # the board doesnt get it stuck. if that happens, that algorythm will 
     # call the multisquare method again
-    return did_something
+    if did_something:
+        return 1
+    else:
+        return 0
 
 # recursive function to generate all possible valid combinations for the 
 # list of tiles border_tiles, where current_mines is a dictionary that matches
@@ -444,8 +493,20 @@ def get_unknown_tiles(board):
                 unknown_tiles.append((i, j))
 
     return unknown_tiles
-                
 
+# pops all unknown tiles (only to be called if we know they arent mines)
+def pop_all_unknowns(board):
+    for i in range(game_reader.num_rows):
+        for j in range(game_reader.num_cols):
+            if board[i][j] == -1:
+                game_input.click_cell(
+                        game_reader.get_window_position(),
+                        i, j,
+                        right_click=False   # this pops tiles
+                    )
+    
+    return
+                
 # calculates the number of mines left as the starting number
 # minus all the flags that have been placed on the grid
 def recompute_mines_left(board):

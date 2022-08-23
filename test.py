@@ -2,7 +2,7 @@ import solver
 import game_input
 import game_reader
 
-REPETITIONS = 500   # number of valid games to play
+REPETITIONS = 1000   # number of valid games to play
 
 # test program
 # this plays a certain number of games on a fixed difficulty
@@ -11,7 +11,7 @@ REPETITIONS = 500   # number of valid games to play
 # beggining are not counted as losing is not the solver's fault
 if __name__ == "__main__":
     # difficulty setting
-    game_reader.load_difficulty("i")
+    game_reader.load_difficulty([" ", "i"])
 
     wins = 0
     valid_games = 0
