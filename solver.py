@@ -17,10 +17,12 @@ possible_sols = []
 # the number of tiles we want to calculate combinations of
 LOW_TILES_THRESHOLD = 20
 
-# solves the game, by now, with the single square method
+# solves the game, starting with the single square method.
 # this method checks the surrounding tiles of a numbered square,
 # placing mines in all unknown tiles if all of them must be
 # mines and popping them if all flags have already been placed
+# if it gets stuck, it calls the multisquare method, which will
+# return to this one after making a move.
 # returns 1 if it has been able to solve the game, 0 if it got
 # stuck and -1 if it lost the game on a random starting click
 def basic_solve():
@@ -518,6 +520,10 @@ def recompute_mines_left(board):
 
     return mines_left
 
+# ussage: python3 solver.py <difficulty>, where <difficulty> can be
+# b (begginer), i (intermediate), e (expert) or c (custom).
+# in the case of custom difficulty three more arguments are expected:
+# num_rows, num_cols and num_mines of the custom game, in that order
 if __name__ == "__main__":
     # difficulty can be specified through command line
     if len(sys.argv) > 1:

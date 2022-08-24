@@ -1,14 +1,13 @@
 import pyautogui
 import win32gui
-import game_input
 import termcolor
 import os
 
 os.system('color')
 
-# constant declaration, could be moved somewhere else
-game_window_title = "Minesweeper"
-square_size = 16
+# constant declaration
+game_window_title = "Minesweeper"   # title of the window to screenshot
+square_size = 16    # pixel size of each of the game cells
 
 # the middle pixel for each square, which will be 
 # used to identify the number on each tile using color
@@ -18,8 +17,7 @@ middle_pixel_pos = (square_size/2 - 1, square_size/2 - 1)
 # we will use this second pixel to get its color
 aux_pixel_pos = (7, 3)
 
-# this could be modified to include presets for 
-# preexisting difficulty settings
+# this board values will be used if no difficulty is specified
 num_rows = 16
 num_cols = 16
 num_mines = 40
@@ -233,23 +231,3 @@ def print_cell(content):
         print(termcolor.colored(" 7 ", 'yellow'), end='')
     elif content == 8:  # 8 mines
         print(termcolor.colored(" 3 ", 'yellow'), end='')
-
-if __name__ == "__main__":     
-    im = get_game_screenshot()
-    if im:
-        #im.show()
-        #im.save("testimage.png")
-        board = read_board(im)
-        print_board(board)
-
-        # left click on a square
-        game_input.click_cell(window_position, 6, 2)
-        # right click on another one
-        game_input.click_cell(window_position, 4, 4, True)
-
-        # print the board again
-        im = get_game_screenshot()
-        board = read_board(im)
-        print("\n")
-        print_board(board)
-
